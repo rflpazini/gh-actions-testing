@@ -34,3 +34,5 @@ jobs:
         run: |
           ver=$(echo "${GITHUB_REF##*/}" | sed -e "s/\//_/" | sed -e "s/([^a-zA-z0-9_.-])/ /" | sed -e "s/\^/ /g")
           echo $ver
+          ref=$(grep GIT_REF .git-env | awk -F '=' '{print $2}');
+          echo $ref
