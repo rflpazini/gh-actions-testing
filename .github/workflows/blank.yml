@@ -36,3 +36,4 @@ jobs:
           echo $ver
           ref=$(grep GIT_REF .git-env | awk -F '=' '{print $2}');
           echo $ref
+          echo "Hello ${{ github.repository }}"
