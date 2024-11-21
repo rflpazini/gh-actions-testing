@@ -10,11 +10,10 @@ jobs:
       pull-requests: write
     steps:
       - name: Extract appVersion
-      id: extract_version
-      run: |
-        APP_VERSION=$(yq e '.appVersion' deploy/helm/Chart.yaml)
-        echo "app_version=$APP_VERSION" >> $GITHUB_ENV
-
+        id: extract_version
+        run: |
+          APP_VERSION=$(yq e '.appVersion' deploy/helm/Chart.yaml)
+          echo "app_version=$APP_VERSION" >> $GITHUB_ENV
       - uses: mheap/github-action-required-labels@v5
         with:
           mode: exactly
