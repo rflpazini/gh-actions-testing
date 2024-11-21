@@ -18,4 +18,25 @@ jobs:
         run: |
           APP_VERSION=$(yq e '.appVersion' deploy/helm/Chart.yaml)
           echo "app_version=$APP_VERSION" >> $GITHUB_ENV
-      - uses: actions/labeler@v5
+
+      # Dynamically add a label using the version number
+      - name: Add Dynamic Label
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const label = `semver:${env.app_version}`;
+            const labels = await github.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const hasLabel = labels.data.some(l => l.name === label);
+            if (!hasLabel) {
+              await github.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                labels: [label],
+              });
+            }
