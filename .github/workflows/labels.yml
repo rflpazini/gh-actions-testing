@@ -2,6 +2,7 @@ name: Pull Request Labels
 on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
+
 jobs:
   label:
     runs-on: ubuntu-latest
@@ -9,11 +10,34 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: mheap/github-action-required-labels@v5
+      # Step to checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step to extract appVersion from Chart.yaml
+      - name: Extract appVersion
+        id: extract_version
+        run: |
+          APP_VERSION=$(yq e '.appVersion' deploy/helm/Chart.yaml)
+          echo "app_version=$APP_VERSION" >> $GITHUB_ENV
+      
+      # Step to apply version to labels
+      - name: Apply version to labels
+        id: apply_version
+        run: |
+          echo "semver:patch-$app_version" >> labels_with_version.txt
+          echo "semver:minor-$app_version" >> labels_with_version.txt
+          echo "semver:major-$app_version" >> labels_with_version.txt
+        env:
+          app_version: ${{ env.app_version }}
+
+      # Use the labels with the extracted version
+      - name: Required Labels
+        uses: mheap/github-action-required-labels@v5
         with:
           mode: exactly
           count: 1
           labels: |
-            semver:patch
-            semver:minor
-            semver:major
+            semver:patch-${{ env.app_version }}
+            semver:minor-${{ env.app_version }}
+            semver:major-${{ env.app_version }}
