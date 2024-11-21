@@ -18,9 +18,4 @@ jobs:
         run: |
           APP_VERSION=$(yq e '.appVersion' deploy/helm/Chart.yaml)
           echo "app_version=$APP_VERSION" >> $GITHUB_ENV
-      - uses: mheap/github-action-required-labels@v5
-        with:
-          mode: exactly
-          count: 1
-          labels: |
-            env.app_version
+      - uses: actions/labeler@v5
