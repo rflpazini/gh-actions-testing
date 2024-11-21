@@ -9,7 +9,11 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      
       - uses: actions/checkout@v4
+      - name: LS folder
+        run: |
+            ls -lha
       - name: Extract appVersion
         run: |
           APP_VERSION=$(yq e '.appVersion' deploy/helm/Chart.yaml)
