@@ -31,12 +31,10 @@ jobs:
         run: |
           get_label_color() {
             local label="$1"
-            if [[ "$label" == chart:* ]]; then
-              echo "0000FF" # Blue for chart-related labels
-            elif [[ "$label" == release:* ]]; then
-              echo "FF5733" # Orange for release-related labels
-            else
-              echo "CCCCCC" # Gray for others
+            if [[ "$label" == release:* ]]; then
+              echo "FBCA04" # Yellow for release-related labels
+            elif [[ "$label" == *"release"* ]]; then
+              echo "1D76DB" # Blue for chart-related labels
             fi
           }
 
@@ -47,5 +45,3 @@ jobs:
             gh label edit "$label" --color "$color" || \
             echo "Failed to update color for label: $label"
           done <<< "$labels"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
