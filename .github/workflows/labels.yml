@@ -1,0 +1,47 @@
+name: Labels
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  version-label:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract appVersion and Helm version
+        run: |
+          CHART_FILE=$(find deploy -type f -path '*/Chart.yaml')
+          echo "APP_VERSION=$(yq e '.appVersion' $CHART_FILE)" >> $GITHUB_ENV
+          echo "HELM_VERSION=$(yq e '.version' $CHART_FILE)" >> $GITHUB_ENV
+      - name: Generate labeler.yml
+        run: |
+          cat << EOF > .github/labeler.yml
+          "release: ${{ env.APP_VERSION }}":
+            - changed-files:
+              - any-glob-to-any-file: '**'
+          "chart: ${{ env.HELM_VERSION }}":
+            - base-branch: 'main'
+          EOF
+      - name: Run Labeler
+        uses: actions/labeler@v5
+      - name: Set Label Colors
+        run: |
+          get_label_color() {
+            local label="$1"
+            if [[ "$label" == release:* ]]; then
+              echo "FBCA04" # Yellow for release-related labels
+            elif [[ "$label" == *"release"* ]]; then
+              echo "1D76DB" # Blue for chart-related labels
+            fi
+          }
+
+          labels=$(gh label list --json name --jq '.[].name')
+          
+          while IFS= read -r label; do
+            color=$(get_label_color "$label")
+            gh label edit "$label" --color "$color" || \
+            echo "Failed to update color for label: $label"
+          done <<< "$labels"
