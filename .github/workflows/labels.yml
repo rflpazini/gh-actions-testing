@@ -19,11 +19,25 @@ jobs:
       - name: Generate labeler.yml
         run: |
           cat << EOF > .github/labeler.yml
-          "${{ env.APP_VERSION }}":
+          "release: ${{ env.APP_VERSION }}":
             - changed-files:
               - any-glob-to-any-file: '**'
-          "helm: ${{ env.HELM_VERSION }}":
+          "chart: ${{ env.HELM_VERSION }}":
             - base-branch: 'main'
           EOF
       - name: Run Labeler
         uses: actions/labeler@v5
+      - name: Set Label Colors
+        run: |
+          # Define label colors
+          declare -A label_colors=(
+            ["release"]="FF5733"
+            ["chart"]="FFCC00"
+          )
+          
+          for label in "${!label_colors[@]}"; do
+            gh label edit "$label" --color "${label_colors[$label]}" || \
+            gh label create "$label" --color "${label_colors[$label]}"
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
