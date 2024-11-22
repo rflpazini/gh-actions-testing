@@ -1,33 +1,29 @@
-name: Pull Request Labels
+name: Labels
 on:
   pull_request:
-    types: [opened, labeled, unlabeled, synchronize]
+    types: [ opened, synchronize, reopened ]
+
 jobs:
-  label:
+  version-label:
     runs-on: ubuntu-latest
     permissions:
       issues: write
       pull-requests: write
     steps:
-      
       - uses: actions/checkout@v4
-      - name: LS folder
+      - name: Extract appVersion and Helm version
         run: |
-            ls -lha
-      - name: Extract appVersion
-        run: |
-          APP_VERSION=$(yq e '.appVersion' deploy/helm/Chart.yaml)
-          echo "app_version=$APP_VERSION" >> $GITHUB_ENV
-
-      # Dynamically generate labeler.yml
+          CHART_FILE=$(find deploy -type f -path '*/Chart.yaml')
+          echo "APP_VERSION=$(yq e '.appVersion' $CHART_FILE)" >> $GITHUB_ENV
+          echo "HELM_VERSION=$(yq e '.version' $CHART_FILE)" >> $GITHUB_ENV
       - name: Generate labeler.yml
         run: |
           cat << EOF > .github/labeler.yml
-          "${{ env.app_version }}":
+          "${{ env.APP_VERSION }}":
             - changed-files:
               - any-glob-to-any-file: '**'
+          "helm: ${{ env.HELM_VERSION }}":
+            - base-branch: 'main'
           EOF
-
-      # Run the labeler
       - name: Run Labeler
-        uses: actions/labeler@v4
+        uses: actions/labeler@v5
