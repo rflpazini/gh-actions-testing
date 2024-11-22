@@ -27,25 +27,25 @@ jobs:
           EOF
       - name: Run Labeler
         uses: actions/labeler@v5
-     - name: Set Label Colors
-      run: |
-        get_label_color() {
-          local label="$1"
-          if [[ "$label" == chart:* ]]; then
-            echo "0000FF" # Blue for chart-related labels
-          elif [[ "$label" == release:* ]]; then
-            echo "FF5733" # Orange for release-related labels
-          else
-            echo "CCCCCC" # Gray for others
-          fi
-        }
+      - name: Set Label Colors
+        run: |
+          get_label_color() {
+            local label="$1"
+            if [[ "$label" == chart:* ]]; then
+              echo "0000FF" # Blue for chart-related labels
+            elif [[ "$label" == release:* ]]; then
+              echo "FF5733" # Orange for release-related labels
+            else
+              echo "CCCCCC" # Gray for others
+            fi
+          }
 
-        labels=$(gh label list --json name --jq '.[].name')
-        
-        while IFS= read -r label; do
-          color=$(get_label_color "$label")
-          gh label edit "$label" --color "$color" || \
-          echo "Failed to update color for label: $label"
-        done <<< "$labels"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          labels=$(gh label list --json name --jq '.[].name')
+          
+          while IFS= read -r label; do
+            color=$(get_label_color "$label")
+            gh label edit "$label" --color "$color" || \
+            echo "Failed to update color for label: $label"
+          done <<< "$labels"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
