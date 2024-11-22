@@ -29,15 +29,23 @@ jobs:
         uses: actions/labeler@v5
       - name: Set Label Colors
         run: |
-          # Define label colors
-          declare -A label_colors=(
-            ["release"]="FF5733"
-            ["chart"]="FFCC00"
-          )
-          
-          for label in "${!label_colors[@]}"; do
-            gh label edit "$label" --color "${label_colors[$label]}" || \
-            gh label create "$label" --color "${label_colors[$label]}"
+          get_label_color() {
+            local label="$1"
+            if [[ "$label" == *"chart"* ]]; then
+              echo "0000FF" # Blue for chart-related labels
+            elif [[ "$label" == *"release"* ]]; then
+              echo "FF5733" # Orange for release-related labels
+            else
+              echo "CCCCCC" # Gray for others
+            fi
+          }
+
+          labels=$(gh label list --json name --jq '.[].name')
+
+          for label in $labels; do
+            color=$(get_label_color "$label")
+            gh label edit "$label" --color "$color" || \
+            echo "Failed to update color for $label"
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
