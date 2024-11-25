@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{`{{ secrets.GITHUB_TOKEN }}`}}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract appVersion and Helm version
         run: |
           CHART_FILE=$(find deploy/helm -type f -path "*/v2/*/Chart.yaml" -print -quit)
@@ -25,10 +25,10 @@ jobs:
       - name: Generate labeler.yml
         run: |
           cat << EOF > .github/labeler.yml
-          "release: ${{`{{ env.APP_VERSION }}`}}":
+          "release: ${{ env.APP_VERSION }}":
             - changed-files:
               - any-glob-to-any-file: '**'
-          "chart: ${{`{{ env.HELM_VERSION }}`}}":
+          "chart: ${{ env.HELM_VERSION }}":
             - base-branch: 'main'
           EOF
       - name: Run Labeler
@@ -52,4 +52,4 @@ jobs:
             echo "Failed to update color for label: $label"
           done <<< "$labels"
         env:
-          GITHUB_TOKEN: ${{`{{ secrets.GITHUB_TOKEN }}`}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
