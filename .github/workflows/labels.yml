@@ -1,7 +1,8 @@
 name: Labels
+
 on:
   pull_request:
-    types: [ opened, synchronize, reopened ]
+    types: [opened, synchronize, reopened]
 
 jobs:
   versions-labels:
@@ -10,9 +11,11 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PKG_REPO_TOKEN }}
+      
       - name: Extract appVersion and Helm version
         run: |
           CHART_FILE=$(find deploy/helm -type f -path "*/v2/*/Chart.yaml" -print -quit)
@@ -22,6 +25,14 @@ jobs:
           echo "$CHART_FILE"
           echo "APP_VERSION=$(yq e '.appVersion' $CHART_FILE)" >> $GITHUB_ENV
           echo "HELM_VERSION=$(yq e '.version' $CHART_FILE)" >> $GITHUB_ENV
+
+      - name: Extract lib-observability-go version from go.mod
+        id: extract-lib-version
+        run: |
+          # Extract the version of the specific library
+          OBSERVABILITY_VERSION=$(grep 'github.com/Pluto-tv/lib-observability-go/v2' go.mod | awk '{print $2}')
+          echo "OBSERVABILITY_VERSION=$OBSERVABILITY_VERSION" >> $GITHUB_ENV
+
       - name: Generate labeler.yml
         run: |
           cat << EOF > .github/labeler.yml
@@ -30,17 +41,24 @@ jobs:
               - any-glob-to-any-file: '**'
           "chart: ${{ env.HELM_VERSION }}":
             - base-branch: 'main'
+          "observability: ${{ env.OBSERVABILITY_VERSION }}":
+            - changed-files:
+              - any-glob-to-any-file: '**'
           EOF
+
       - name: Run Labeler
         uses: actions/labeler@v5
+
       - name: Set Label Colors
         run: |
           get_label_color() {
             local label="$1"
             if [[ "$label" == release:* ]]; then
               echo "FBCA04" # Yellow for release-related labels
-            elif [[ "$label" == *"release"* ]]; then
+            elif [[ "$label" == chart:* ]]; then
               echo "1D76DB" # Blue for chart-related labels
+            elif [[ "$label" == observability:* ]]; then
+              echo "0E8A16" # Green for observability-related labels
             fi
           }
 
