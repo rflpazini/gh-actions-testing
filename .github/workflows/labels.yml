@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PKG_REPO_TOKEN }}
       
       - name: Extract appVersion and Helm version
         run: |
