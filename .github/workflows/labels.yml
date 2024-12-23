@@ -1,0 +1,105 @@
+name: Labels
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  versions-labels:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract appVersion and Helm version
+        run: |
+          CHART_FILE=$(find deploy/helm -type f -path "*/v2/*/Chart.yaml" -print -quit)
+          if [ -z "$CHART_FILE" ]; then
+              CHART_FILE=$(find deploy/helm -type f -path "*/Chart.yaml" -print -quit)
+          fi
+          echo "$CHART_FILE"
+          echo "APP_VERSION=$(yq e '.appVersion' $CHART_FILE)" >> $GITHUB_ENV
+          echo "HELM_VERSION=$(yq e '.version' $CHART_FILE)" >> $GITHUB_ENV
+
+      - name: Extract lib-observability-go version from go.mod
+        run: |
+          echo "OBSERVABILITY_VERSION=$(grep 'github.com/Pluto-tv/lib-observability-go/v2' go.mod | awk '{print $2}')" >> $GITHUB_ENV
+
+      - name: Generate labels
+        run: |
+          cat << EOF > .github/labeler.yml
+          "release: ${{ env.APP_VERSION }}":
+            - changed-files:
+              - any-glob-to-any-file: '**'
+          "chart: ${{ env.HELM_VERSION }}":
+            - base-branch: 'main'
+          "observability: ${{ env.OBSERVABILITY_VERSION }}":
+            - changed-files:
+              - any-glob-to-any-file: '**'
+          EOF
+
+      - name: Run Labeler
+        uses: actions/labeler@v5
+
+      - name: Manage PR Labels (Conditional Removal)
+        run: |
+          # Get all current labels on the pull request
+          pr_labels=$(gh pr view ${{ github.event.pull_request.number }} --json labels --jq '.labels[].name')
+
+          # Define label categories
+          label_categories=("release:" "chart:" "observability:")
+
+          # Iterate over label categories and handle each one
+          for category in "${label_categories[@]}"; do
+            # Extract labels of the current category
+            matching_labels=$(echo "$pr_labels" | grep "^$category" || true)
+
+            # If there are multiple labels in the category, sort them by version
+            if [[ $(echo "$matching_labels" | wc -l) -gt 1 ]]; then
+              # Identify the newest label (highest version) and all older ones
+              newest_label=$(echo "$matching_labels" | sort -r | head -n 1)
+              old_labels=$(echo "$matching_labels" | grep -v "^$newest_label$" || true)
+
+              # Remove all old labels for this category
+              if [[ -n "$old_labels" ]]; then
+                echo "Newest label for $category: $newest_label"
+                echo "Removing old labels for $category: $old_labels"
+                while IFS= read -r old_label; do
+                  gh pr edit ${{ github.event.pull_request.number }} --remove-label "$old_label"
+                done <<< "$old_labels"
+              fi
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Label Colors
+        run: |
+          get_label_color() {
+            local label="$1"
+            if [[ "$label" == release:* ]]; then
+              echo "FBCA04" # Yellow for release-related labels
+            elif [[ "$label" == chart:* ]]; then
+              echo "1D76DB" # Blue for chart-related labels
+            elif [[ "$label" == observability:* ]]; then
+              echo "0E8A16" # Green for observability-related labels
+            fi
+          }
+
+          # Fetch all labels on the repository
+          labels=$(gh label list --json name --jq '.[].name')
+
+          while IFS= read -r label; do
+            color=$(get_label_color "$label")
+            if [[ -n "$color" ]]; then
+              echo "Setting color $color for label: $label"
+              gh label edit "$label" --color "$color" || echo "Failed to update color for label: $label"
+            fi
+          done <<< "$labels"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
