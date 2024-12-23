@@ -75,26 +75,31 @@ jobs:
               fi
             fi
           done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: Set Label Colors
-          run: |
-            get_label_color() {
-              local label="$1"
-              if [[ "$label" == release:* ]]; then
-                echo "FBCA04" # Yellow for release-related labels
-              elif [[ "$label" == chart:* ]]; then
-                echo "1D76DB" # Blue for chart-related labels
-              elif [[ "$label" == observability:* ]]; then
-                echo "0E8A16" # Green for observability-related labels
-              fi
-            }
+      - name: Set Label Colors
+        run: |
+          get_label_color() {
+            local label="$1"
+            if [[ "$label" == release:* ]]; then
+              echo "FBCA04" # Yellow for release-related labels
+            elif [[ "$label" == chart:* ]]; then
+              echo "1D76DB" # Blue for chart-related labels
+            elif [[ "$label" == observability:* ]]; then
+              echo "0E8A16" # Green for observability-related labels
+            fi
+          }
 
-            labels=$(gh label list --json name --jq '.[].name')
-            
-            while IFS= read -r label; do
-              color=$(get_label_color "$label")
-              gh label edit "$label" --color "$color" || \
-              echo "Failed to update color for label: $label"
-            done <<< "$labels"
+          # Fetch all labels on the repository
+          labels=$(gh label list --json name --jq '.[].name')
+
+          while IFS= read -r label; do
+            color=$(get_label_color "$label")
+            if [[ -n "$color" ]]; then
+              echo "Setting color $color for label: $label"
+              gh label edit "$label" --color "$color" || echo "Failed to update color for label: $label"
+            fi
+          done <<< "$labels"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
